@@ -5,13 +5,12 @@ import MassDonation from "../models/MassDonation.js";
 import Notification from "../models/Notification.js";
 import User from "../models/User.js";
 
-// ── Notification helper — uses your Notification model's userId field ─────────
 const notif = (userId, title, message, type = "fund_update", priority = "medium") => ({
   userId, title, message, type, priority, isRead: false, isArchived: false,
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// FUND REQUEST (system lends — admin approves/rejects)
+// FUND REQUEST
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const submitFundRequest = async (req, res) => {
@@ -21,7 +20,7 @@ export const submitFundRequest = async (req, res) => {
 
     const newFund = new FundRequest({
       userId: req.user.id, title, description,
-      amountNeeded: Number(amountNeeded), category: category || "other"
+      amountNeeded: Number(amountNeeded), category: category || "other",
     });
     await newFund.save();
 
@@ -71,7 +70,7 @@ export const donateFund = async (req, res) => {
 
     const donation = new Donation({
       fundRequestId, donorId: req.user.id,
-      amount: Number(amount), paymentMethod, note: note || ""
+      amount: Number(amount), paymentMethod, note: note || "",
     });
     await donation.save();
     fundRequest.amountRaised = (fundRequest.amountRaised || 0) + Number(amount);
@@ -112,89 +111,70 @@ export const deleteMyFundRequest = async (req, res) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MASS FUND REQUEST (community donations — separate flow)
+// MASS FUND REQUEST
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const submitMassFundRequest = async (req, res) => {
   try {
     const { title, description, goalAmount, contactNumber, area } = req.body;
 
-    // Validate required text fields
-    if (!title || !title.trim())          return res.status(400).json({ message: "Title is required." });
+    if (!title || !title.trim())             return res.status(400).json({ message: "Title is required." });
     if (!description || !description.trim()) return res.status(400).json({ message: "Description is required." });
     if (!goalAmount || Number(goalAmount) < 1) return res.status(400).json({ message: "A valid goal amount is required." });
-    if (Number(goalAmount) > 10000000)    return res.status(400).json({ message: "Goal amount cannot exceed ৳1 Crore." });
+    if (Number(goalAmount) > 10000000)       return res.status(400).json({ message: "Goal amount cannot exceed ৳1 Crore." });
     if (!contactNumber || !contactNumber.trim()) return res.status(400).json({ message: "Contact number is required." });
 
-    // ── Extract Cloudinary URLs from uploaded files ──────────────────────────
-    // CloudinaryStorage sets file.path = the Cloudinary URL (same as emergency reports)
-    const images = [];
+    const images    = [];
     const documents = [];
 
     if (req.files) {
-      if (req.files.images && req.files.images.length > 0) {
-        req.files.images.forEach(file => {
-          if (file.path) images.push(file.path);
-        });
-      }
-      if (req.files.documents && req.files.documents.length > 0) {
-        req.files.documents.forEach(file => {
-          if (file.path) documents.push(file.path);
-        });
-      }
+      (req.files.images    || []).forEach(f => { if (f.path) images.push(f.path); });
+      (req.files.documents || []).forEach(f => { if (f.path) documents.push(f.path); });
     }
 
-    // Documents are mandatory for admin verification
     if (documents.length === 0) {
       return res.status(400).json({ message: "At least one verification document is required (PDF, DOC, or TXT)." });
     }
 
     const massFund = new MassFundRequest({
-      userId: req.user.id,
-      title: title.trim(),
-      description: description.trim(),
-      goalAmount: Number(goalAmount),
+      userId:        req.user.id,
+      title:         title.trim(),
+      description:   description.trim(),
+      goalAmount:    Number(goalAmount),
       contactNumber: contactNumber.trim(),
-      area: area ? area.trim() : "",
+      area:          area ? area.trim() : "",
       images,
       documents,
     });
     await massFund.save();
 
-    // Notify admins only (no user-wide notification — users browse manually)
     const admins = await User.find({ role: "admin" }).select("_id");
     if (admins.length > 0) {
       await Notification.insertMany(admins.map(a =>
-        notif(a._id,
-          `🌍 New Mass Fund Request: ${title}`,
+        notif(a._id, `🌍 New Mass Fund Request: ${title}`,
           `Goal: ৳${Number(goalAmount).toLocaleString()} — ${description.substring(0, 80)}...`)
       ));
     }
 
-    res.status(201).json({
-      message: "Mass fund request submitted. Awaiting admin approval.",
-      massFund
-    });
+    res.status(201).json({ message: "Mass fund request submitted. Awaiting admin approval.", massFund });
   } catch (error) {
     console.error("submitMassFundRequest error:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
-// Users: approved funds — documents are HIDDEN from public
 export const getApprovedMassFunds = async (req, res) => {
   try {
     const funds = await MassFundRequest.find({ status: "Approved" })
       .populate("userId", "name area")
       .sort({ createdAt: -1 })
-      .select("-documents"); // strip documents
+      .select("-documents");
     res.status(200).json(funds);
   } catch (error) {
     res.status(500).json({ message: "Server error", error });
   }
 };
 
-// User's own requests — full data (they submitted it)
 export const getMyMassFunds = async (req, res) => {
   try {
     const funds = await MassFundRequest.find({ userId: req.user.id }).sort({ createdAt: -1 });
@@ -204,7 +184,6 @@ export const getMyMassFunds = async (req, res) => {
   }
 };
 
-// Public: single fund — NO documents
 export const getMassFundById = async (req, res) => {
   try {
     const fund = await MassFundRequest.findById(req.params.id)
@@ -217,7 +196,6 @@ export const getMassFundById = async (req, res) => {
   }
 };
 
-// Admin: single fund — FULL data including documents
 export const getMassFundByIdAdmin = async (req, res) => {
   try {
     const fund = await MassFundRequest.findById(req.params.id)
@@ -229,11 +207,11 @@ export const getMassFundByIdAdmin = async (req, res) => {
   }
 };
 
-// Admin: all mass fund requests — full data
+// Bug 3 fix: include fundWarningCount + fundFeaturesBlocked in populate
 export const getAllMassFunds = async (req, res) => {
   try {
     const funds = await MassFundRequest.find()
-      .populate("userId", "name area email contactInfo")
+      .populate("userId", "name area email contactInfo fundWarningCount fundFeaturesBlocked")
       .sort({ createdAt: -1 });
     res.status(200).json(funds);
   } catch (error) {
@@ -241,7 +219,6 @@ export const getAllMassFunds = async (req, res) => {
   }
 };
 
-// Admin: update status + instant notification to requester
 export const updateMassFundStatus = async (req, res) => {
   try {
     const { status } = req.body;
@@ -255,7 +232,7 @@ export const updateMassFundStatus = async (req, res) => {
 
     await Notification.create(notif(
       fund.userId._id,
-      status === "Approved" ? `✅ Mass Fund Request Approved!` : `❌ Mass Fund Request Rejected`,
+      status === "Approved" ? "✅ Mass Fund Request Approved!" : "❌ Mass Fund Request Rejected",
       status === "Approved"
         ? `Your mass fund request "${fund.title}" has been approved and is now live for donations.`
         : `Your mass fund request "${fund.title}" was not approved. You may submit a new request.`,
@@ -269,7 +246,6 @@ export const updateMassFundStatus = async (req, res) => {
   }
 };
 
-// User or admin: delete a mass fund request
 export const deleteMassFund = async (req, res) => {
   try {
     const fund = await MassFundRequest.findById(req.params.id);
@@ -284,7 +260,7 @@ export const deleteMassFund = async (req, res) => {
   }
 };
 
-// Donate to a mass fund request
+// Bug 3 fix: cap donation, no silent replace — frontend handles UX
 export const donateToMassFund = async (req, res) => {
   try {
     const { id } = req.params;
@@ -296,21 +272,41 @@ export const donateToMassFund = async (req, res) => {
     if (fund.status !== "Approved") return res.status(400).json({ message: "Can only donate to approved requests" });
     if (fund.userId.toString() === req.user.id) return res.status(400).json({ message: "Cannot donate to your own request" });
 
+    const alreadyRaised = fund.amountRaised || 0;
+    const remaining     = fund.goalAmount - alreadyRaised;
+
+    if (remaining <= 0) {
+      return res.status(400).json({ message: "This campaign has already reached its goal." });
+    }
+
+    // Bug 5 fix: reject instead of silently cap — frontend shows the error
+    if (Number(amount) > remaining) {
+      return res.status(400).json({
+        message: `Your donation of ৳${Number(amount).toLocaleString()} exceeds the remaining goal of ৳${remaining.toLocaleString()}. Please enter an amount of ৳${remaining.toLocaleString()} or less.`,
+        remainingGoal: remaining,
+        exceeds: true,
+      });
+    }
+
     const donation = new MassDonation({
-      massFundRequestId: id, donorId: req.user.id,
-      amount: Number(amount), paymentMethod, note: note || ""
+      massFundRequestId: id,
+      donorId:           req.user.id,
+      amount:            Number(amount),
+      paymentMethod,
+      note:              note || "",
     });
     await donation.save();
-    fund.amountRaised = (fund.amountRaised || 0) + Number(amount);
+
+    fund.amountRaised = alreadyRaised + Number(amount);
     fund.donations.push(donation._id);
     await fund.save();
 
     const donor = await User.findById(req.user.id).select("name");
     await Notification.create(
-      notif(fund.userId,
-        `💚 New Donation to Your Campaign!`,
+      notif(fund.userId, `💚 New Donation to Your Campaign!`,
         `${donor?.name || "Someone"} donated ৳${Number(amount).toLocaleString()} to "${fund.title}".`)
     );
+
     res.status(201).json({ message: "Donation successful", donation, amountRaised: fund.amountRaised });
   } catch (error) {
     res.status(500).json({ message: "Server error", error });
@@ -321,6 +317,19 @@ export const getMassFundDonations = async (req, res) => {
   try {
     const donations = await MassDonation.find({ massFundRequestId: req.params.id })
       .populate("donorId", "name area")
+      .sort({ createdAt: -1 });
+    res.status(200).json(donations);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
+};
+
+// Bug 1 fix: dedicated endpoint — query MassDonation directly by donorId
+export const getMyMassDonations = async (req, res) => {
+  try {
+    const donations = await MassDonation.find({ donorId: req.user.id })
+      .populate("massFundRequestId", "title goalAmount amountRaised")
+      .populate("donorId", "name")
       .sort({ createdAt: -1 });
     res.status(200).json(donations);
   } catch (error) {
