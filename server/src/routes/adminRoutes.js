@@ -13,6 +13,7 @@ import {
   addContact,
   updateContact,
   deleteContact,
+  getAnalytics, 
 } from "../controllers/adminController.js";
 import authMiddleware from "../middleware/authMiddleware.js";
 import adminMiddleware from "../middleware/adminMiddleware.js";
@@ -41,5 +42,8 @@ router.get("/contacts",     authMiddleware, getAllContacts);
 router.post("/contacts",    authMiddleware, adminMiddleware, addContact);
 router.put("/contacts/:id", authMiddleware, adminMiddleware, updateContact);
 router.delete("/contacts/:id", authMiddleware, adminMiddleware, deleteContact);
+
+// ── Analytics ─────────────────────────────────────────────────────────────────
+router.get("/analytics", authMiddleware, adminMiddleware, getAnalytics);
 
 export default router;

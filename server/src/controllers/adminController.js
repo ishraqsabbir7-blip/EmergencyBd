@@ -81,10 +81,11 @@ export const updateReportStatus = async (req, res) => {
 
 // ── FUND REQUESTS ─────────────────────────────────────────────────────────────
 
+// Bug 3 fix: populate warning fields so admin sees warning count when reviewing
 export const getAllFundRequests = async (req, res) => {
   try {
     const fundRequests = await FundRequest.find()
-      .populate("userId", "name email contactInfo area")
+      .populate("userId", "name email contactInfo area fundWarningCount fundFeaturesBlocked")
       .sort({ createdAt: -1 });
     res.status(200).json(fundRequests);
   } catch (error) {
@@ -130,6 +131,7 @@ export const updateFundRequestStatus = async (req, res) => {
 
 // ── USERS ─────────────────────────────────────────────────────────────────────
 
+// Bug 3 fix: include warning fields so they appear in fund req review panel
 export const getAllUsers = async (req, res) => {
   try {
     const users = await User.find({ role: "user" })
@@ -300,6 +302,161 @@ export const deleteContact = async (req, res) => {
     const contact = await EmergencyContact.findByIdAndDelete(id);
     if (!contact) return res.status(404).json({ message: "Contact not found" });
     res.status(200).json({ message: "Contact deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
+};
+// ── ANALYTICS ─────────────────────────────────────────────────────────────────
+
+export const getAnalytics = async (req, res) => {
+  try {
+    const now = new Date();
+
+    // ── Helper: get last N months as labels ──────────────────────────────────
+    const getLastNMonths = (n) => {
+      const months = [];
+      for (let i = n - 1; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        months.push({
+          year: d.getFullYear(),
+          month: d.getMonth(),
+          label: d.toLocaleString("en-US", { month: "short", year: "2-digit" }),
+          start: new Date(d.getFullYear(), d.getMonth(), 1),
+          end: new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999),
+        });
+      }
+      return months;
+    };
+
+    const months6 = getLastNMonths(6);
+    const months12 = getLastNMonths(12);
+
+    // ── 1. Emergency Reports ─────────────────────────────────────────────────
+    const allReports = await EmergencyReport.find().lean();
+
+    // Monthly report counts (last 6 months)
+    const reportsByMonth = months6.map(m => ({
+      label: m.label,
+      total: allReports.filter(r => {
+        const d = new Date(r.createdAt);
+        return d >= m.start && d <= m.end;
+      }).length,
+      pending: allReports.filter(r => new Date(r.createdAt) >= m.start && new Date(r.createdAt) <= m.end && r.status === "Pending").length,
+      verified: allReports.filter(r => new Date(r.createdAt) >= m.start && new Date(r.createdAt) <= m.end && r.status === "Verified").length,
+      resolved: allReports.filter(r => new Date(r.createdAt) >= m.start && new Date(r.createdAt) <= m.end && r.status === "Resolved").length,
+    }));
+
+    // By type
+    const reportsByType = ["robbery", "fire", "accident", "harassment", "medical"].map(type => ({
+      type,
+      count: allReports.filter(r => r.emergencyType === type).length,
+    }));
+
+    // Status distribution
+    const reportStatus = {
+      pending: allReports.filter(r => r.status === "Pending").length,
+      verified: allReports.filter(r => r.status === "Verified").length,
+      resolved: allReports.filter(r => r.status === "Resolved").length,
+    };
+
+    // ── 2. Fund Requests ─────────────────────────────────────────────────────
+    const allFunds = await FundRequest.find().lean();
+
+    // Monthly fund counts + amounts (last 6 months)
+    const fundsByMonth = months6.map(m => ({
+      label: m.label,
+      total: allFunds.filter(f => new Date(f.createdAt) >= m.start && new Date(f.createdAt) <= m.end).length,
+      approved: allFunds.filter(f => new Date(f.createdAt) >= m.start && new Date(f.createdAt) <= m.end && f.status === "Approved").length,
+      rejected: allFunds.filter(f => new Date(f.createdAt) >= m.start && new Date(f.createdAt) <= m.end && f.status === "Rejected").length,
+      amountRequested: allFunds
+        .filter(f => new Date(f.createdAt) >= m.start && new Date(f.createdAt) <= m.end)
+        .reduce((sum, f) => sum + (f.amountNeeded || 0), 0),
+      amountApproved: allFunds
+        .filter(f => new Date(f.createdAt) >= m.start && new Date(f.createdAt) <= m.end && f.status === "Approved")
+        .reduce((sum, f) => sum + (f.amountNeeded || 0), 0),
+    }));
+
+    const fundTotals = {
+      total: allFunds.length,
+      approved: allFunds.filter(f => f.status === "Approved").length,
+      rejected: allFunds.filter(f => f.status === "Rejected").length,
+      pending: allFunds.filter(f => f.status === "Pending").length,
+      totalRequested: allFunds.reduce((s, f) => s + (f.amountNeeded || 0), 0),
+      totalApproved: allFunds.filter(f => f.status === "Approved").reduce((s, f) => s + (f.amountNeeded || 0), 0),
+    };
+
+    // ── 3. Users ─────────────────────────────────────────────────────────────
+    const allUsers = await User.find({ role: "user" }).lean();
+
+    const usersByMonth = months6.map(m => ({
+      label: m.label,
+      new: allUsers.filter(u => {
+        const d = new Date(u.createdAt);
+        return d >= m.start && d <= m.end;
+      }).length,
+    }));
+
+    const userTotals = {
+      total: allUsers.length,
+      active: allUsers.filter(u => u.status === "active").length,
+      suspended: allUsers.filter(u => u.status === "suspended").length,
+      blocked: allUsers.filter(u => u.status === "blocked").length,
+      fundBlocked: allUsers.filter(u => u.fundFeaturesBlocked).length,
+      warned: allUsers.filter(u => (u.fundWarningCount || 0) > 0).length,
+    };
+
+    // ── 4. Volunteers ─────────────────────────────────────────────────────────
+    let volunteerStats = { total: 0, approved: 0, totalPointsAwarded: 0, byMonth: [] };
+    try {
+      const VolunteerOpportunity = (await import("../models/VolunteerOpportunity.js")).default;
+      const allOpps = await VolunteerOpportunity.find().lean();
+      volunteerStats = {
+        total: allOpps.length,
+        approved: allOpps.reduce((s, o) => s + (o.approvedUsers?.length || 0), 0),
+        interested: allOpps.reduce((s, o) => s + (o.interestedUsers?.length || 0), 0),
+        totalPointsAwarded: allUsers.reduce((s, u) => s + (u.points || 0), 0),
+        byMonth: months6.map(m => ({
+          label: m.label,
+          opportunities: allOpps.filter(o => new Date(o.createdAt) >= m.start && new Date(o.createdAt) <= m.end).length,
+          approvals: allOpps.reduce((s, o) => {
+            const approved = (o.approvedUsers || []).filter(() => true).length;
+            return s;
+          }, 0),
+        })),
+        topVolunteers: allUsers
+          .filter(u => u.points > 0)
+          .sort((a, b) => b.points - a.points)
+          .slice(0, 5)
+          .map(u => ({ name: u.name, area: u.area, points: u.points, activities: u.volunteerHistory?.length || 0 })),
+      };
+    } catch (e) {
+      // VolunteerOpportunity model may not exist in all envs
+    }
+
+    // ── 5. Timeline — last 20 events across all categories ───────────────────
+    const timelineEvents = [
+      ...allReports.slice(-10).map(r => ({
+        type: "report", label: `${r.emergencyType} report`, status: r.status,
+        date: r.createdAt, color: "#ff6b6b",
+      })),
+      ...allFunds.slice(-10).map(f => ({
+        type: "fund", label: `Fund: ${f.title?.substring(0, 30)}`, status: f.status,
+        date: f.createdAt, color: "#ffd93d",
+      })),
+    ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 15);
+
+    res.status(200).json({
+      reportsByMonth,
+      reportsByType,
+      reportStatus,
+      fundsByMonth,
+      fundTotals,
+      usersByMonth,
+      userTotals,
+      volunteerStats,
+      timelineEvents,
+      generatedAt: new Date().toISOString(),
+    });
   } catch (error) {
     res.status(500).json({ message: "Server error", error });
   }
