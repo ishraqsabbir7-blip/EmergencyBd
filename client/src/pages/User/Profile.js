@@ -269,7 +269,7 @@ const Profile = () => {
               { icon: "🚨", label: "Reports", value: "—", color: "#ff6b6b" },
               { icon: "💰", label: "Fund Requests", value: "—", color: "#ffd93d" },
               { icon: "✅", label: "Resolved", value: "—", color: "#00ff88" },
-              { icon: "🔔", label: "Alerts", value: "Phase 3", color: "#6bcbff" },
+              { icon: "🔔", label: "Notifications", value: "—", color: "#6bcbff" },
             ].map((stat, i) => (
               <div key={i} className="stat-card" style={styles.statCard}>
                 <div style={{ ...styles.statIconCircle, backgroundColor: `${stat.color}15`, border: `1px solid ${stat.color}30` }}>
@@ -315,7 +315,7 @@ const Profile = () => {
                     { icon: "🛡️", label: "Account Role", value: role?.toUpperCase() },
                     { icon: "📅", label: "Member Since", value: new Date(profile?.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) },
                     { icon: "🔄", label: "Last Updated", value: new Date(profile?.updatedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) },
-                    { icon: "🔔", label: "Notifications", value: "Coming in Phase 3" },
+                    { icon: "🔔", label: "Notifications", value: "active" },
                   ].map((item, index) => (
                     <div key={index} className="info-row" style={styles.infoRow}>
                       <div style={styles.infoLeft}>
@@ -404,12 +404,12 @@ const Profile = () => {
               <div style={{ animation: "slideIn 0.3s ease" }}>
                 <div style={styles.cardHeader}>
                   <h3 style={styles.cardTitle}>Notifications</h3>
-                  <span style={styles.phaseBadge}>Phase 3</span>
+                  <span style={styles.phaseBadge}>active</span>
                 </div>
                 <div style={styles.emptyState}>
                   <div style={{ ...styles.emptyIcon, animation: "float 3s ease-in-out infinite" }}>🔔</div>
                   <h4 style={styles.emptyTitle}>Notifications Coming Soon</h4>
-                  <p style={styles.emptyText}>Real-time emergency alerts and notifications will be enabled in Phase 3 of development.</p>
+                  <p style={styles.emptyText}>Real-time emergency alerts and notifications are now active.</p>
                   <div style={styles.phaseInfo}>
                     <div style={styles.phaseItem}>⚡ Real-time alerts</div>
                     <div style={styles.phaseItem}>📍 Radius-based notifications</div>
