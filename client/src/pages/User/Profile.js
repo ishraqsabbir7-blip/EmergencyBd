@@ -125,12 +125,6 @@ const Profile = () => {
         .info-row { transition: all 0.3s ease !important; }
         .info-row:hover { background: rgba(0,255,136,0.06) !important; transform: translateX(6px) !important; border-radius: 12px !important; }
 
-        .stat-card { transition: all 0.3s ease !important; }
-        .stat-card:hover { transform: translateY(-6px) !important; border-color: rgba(0,255,136,0.4) !important; box-shadow: 0 20px 40px rgba(0,0,0,0.4) !important; }
-
-        .tab-btn { transition: all 0.3s ease !important; }
-        .tab-btn:hover { color: #00ff88 !important; }
-
         .save-btn { transition: all 0.3s ease !important; }
         .save-btn:hover { transform: translateY(-2px) !important; box-shadow: 0 10px 30px rgba(0,255,136,0.4) !important; background-color: #00e67a !important; }
 
@@ -160,10 +154,10 @@ const Profile = () => {
         {/* LEFT SIDEBAR */}
         <div style={styles.sidebar}>
 
-          {/* Avatar Section */}
+          {/* Avatar Section - DOUBLED SIZE */}
           <div style={styles.sidebarTop}>
 
-            {/* Clickable Avatar */}
+            {/* Clickable Avatar - BIGGER (240px) */}
             <div style={styles.avatarRing}>
               <div
                 className="avatar-wrapper"
@@ -190,7 +184,7 @@ const Profile = () => {
                 {/* Hover overlay */}
                 <div className="avatar-overlay" style={styles.avatarOverlay}>
                   <span style={styles.cameraIcon}>📷</span>
-                  <span style={styles.overlayText}>Change</span>
+                  <span style={styles.overlayText}>Change Photo</span>
                 </div>
               </div>
             </div>
@@ -212,7 +206,7 @@ const Profile = () => {
             <p style={styles.uploadHint}>Click avatar to update photo</p>
           </div>
 
-          {/* Sidebar Nav */}
+          {/* Sidebar Nav - Only Info and Edit tabs */}
           <div style={styles.sidebarNav}>
             <button
               className="sidebar-link"
@@ -227,20 +221,6 @@ const Profile = () => {
               onClick={() => { setActiveTab("edit"); setEditing(true); }}
             >
               <span>✏️</span> Edit Profile
-            </button>
-            <button
-              className="sidebar-link"
-              style={{ ...styles.sidebarLink, ...(activeTab === "activity" ? styles.activeSidebarLink : {}) }}
-              onClick={() => setActiveTab("activity")}
-            >
-              <span>📊</span> Activity
-            </button>
-            <button
-              className="sidebar-link"
-              style={{ ...styles.sidebarLink, ...(activeTab === "notifications" ? styles.activeSidebarLink : {}) }}
-              onClick={() => setActiveTab("notifications")}
-            >
-              <span>🔔</span> Notifications
             </button>
           </div>
 
@@ -260,28 +240,8 @@ const Profile = () => {
           </div>
         </div>
 
-        {/* RIGHT CONTENT */}
+        {/* RIGHT CONTENT - Without Stats Bar */}
         <div style={styles.content}>
-
-          {/* Top Stats Bar */}
-          <div style={styles.statsBar}>
-            {[
-              { icon: "🚨", label: "Reports", value: "—", color: "#ff6b6b" },
-              { icon: "💰", label: "Fund Requests", value: "—", color: "#ffd93d" },
-              { icon: "✅", label: "Resolved", value: "—", color: "#00ff88" },
-              { icon: "🔔", label: "Notifications", value: "—", color: "#6bcbff" },
-            ].map((stat, i) => (
-              <div key={i} className="stat-card" style={styles.statCard}>
-                <div style={{ ...styles.statIconCircle, backgroundColor: `${stat.color}15`, border: `1px solid ${stat.color}30` }}>
-                  <span style={styles.statIcon}>{stat.icon}</span>
-                </div>
-                <div style={styles.statInfo}>
-                  <span style={{ ...styles.statValue, color: stat.color }}>{stat.value}</span>
-                  <span style={styles.statLabel}>{stat.label}</span>
-                </div>
-              </div>
-            ))}
-          </div>
 
           {/* Main Content Card */}
           <div style={styles.mainCard}>
@@ -315,7 +275,6 @@ const Profile = () => {
                     { icon: "🛡️", label: "Account Role", value: role?.toUpperCase() },
                     { icon: "📅", label: "Member Since", value: new Date(profile?.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) },
                     { icon: "🔄", label: "Last Updated", value: new Date(profile?.updatedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) },
-                    { icon: "🔔", label: "Notifications", value: "active" },
                   ].map((item, index) => (
                     <div key={index} className="info-row" style={styles.infoRow}>
                       <div style={styles.infoLeft}>
@@ -384,40 +343,6 @@ const Profile = () => {
                 </form>
               </div>
             )}
-
-            {/* ACTIVITY TAB */}
-            {activeTab === "activity" && (
-              <div style={{ animation: "slideIn 0.3s ease" }}>
-                <div style={styles.cardHeader}>
-                  <h3 style={styles.cardTitle}>Recent Activity</h3>
-                </div>
-                <div style={styles.emptyState}>
-                  <div style={styles.emptyIcon}>📊</div>
-                  <h4 style={styles.emptyTitle}>No Activity Yet</h4>
-                  <p style={styles.emptyText}>Your emergency reports and fund requests will appear here once submitted.</p>
-                </div>
-              </div>
-            )}
-
-            {/* NOTIFICATIONS TAB */}
-            {activeTab === "notifications" && (
-              <div style={{ animation: "slideIn 0.3s ease" }}>
-                <div style={styles.cardHeader}>
-                  <h3 style={styles.cardTitle}>Notifications</h3>
-                  <span style={styles.phaseBadge}>active</span>
-                </div>
-                <div style={styles.emptyState}>
-                  <div style={{ ...styles.emptyIcon, animation: "float 3s ease-in-out infinite" }}>🔔</div>
-                  <h4 style={styles.emptyTitle}>Notifications Coming Soon</h4>
-                  <p style={styles.emptyText}>Real-time emergency alerts and notifications are now active.</p>
-                  <div style={styles.phaseInfo}>
-                    <div style={styles.phaseItem}>⚡ Real-time alerts</div>
-                    <div style={styles.phaseItem}>📍 Radius-based notifications</div>
-                    <div style={styles.phaseItem}>🔔 Push notifications</div>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -458,8 +383,8 @@ const styles = {
 
   // SIDEBAR
   sidebar: {
-    width: "280px",
-    minWidth: "280px",
+    width: "320px", // Increased from 280px to accommodate larger avatar
+    minWidth: "320px", // Increased from 280px
     backgroundColor: "#0f0f0f",
     borderRight: "1px solid #1e1e1e",
     display: "flex",
@@ -472,17 +397,17 @@ const styles = {
     flexDirection: "column",
     alignItems: "center",
     textAlign: "center",
-    gap: "10px",
+    gap: "12px",
     paddingBottom: "24px",
     borderBottom: "1px solid #1e1e1e",
     position: "relative",
   },
   avatarRing: {
-    width: "88px",
-    height: "88px",
+    width: "240px", // DOUBLED from 120px
+    height: "240px", // DOUBLED from 120px
     borderRadius: "50%",
     background: "linear-gradient(135deg, #00ff88, #00cc6a)",
-    padding: "3px",
+    padding: "4px",
     animation: "glow 3s ease-in-out infinite",
   },
   avatarWrapper: {
@@ -508,7 +433,7 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: "30px",
+    fontSize: "88px", // DOUBLED from 44px
     fontWeight: "700",
     color: "#00ff88",
     backgroundColor: "#111111",
@@ -524,17 +449,17 @@ const styles = {
     borderRadius: "50%",
   },
   avatarSpinner: {
-    width: "28px",
-    height: "28px",
-    border: "3px solid rgba(0,255,136,0.1)",
-    borderTop: "3px solid #00ff88",
+    width: "72px", // DOUBLED from 36px
+    height: "72px", // DOUBLED from 36px
+    border: "4px solid rgba(0,255,136,0.1)",
+    borderTop: "4px solid #00ff88",
     borderRadius: "50%",
     animation: "spin 0.8s linear infinite",
   },
   avatarOverlay: {
     position: "absolute",
     inset: 0,
-    backgroundColor: "rgba(0,0,0,0.6)",
+    backgroundColor: "rgba(0,0,0,0.7)",
     borderRadius: "50%",
     display: "flex",
     flexDirection: "column",
@@ -542,26 +467,26 @@ const styles = {
     justifyContent: "center",
     opacity: 0,
     transition: "opacity 0.3s ease",
-    gap: "2px",
+    gap: "8px",
   },
   cameraIcon: {
-    fontSize: "18px",
+    fontSize: "44px", // DOUBLED from 22px
   },
   overlayText: {
     color: "#fff",
-    fontSize: "10px",
+    fontSize: "16px", // Increased from 11px
     fontWeight: "600",
     letterSpacing: "0.5px",
   },
   onlineDot: {
     position: "absolute",
-    top: "68px",
-    left: "calc(50% + 26px)",
-    width: "14px",
-    height: "14px",
+    top: "164px", // Adjusted for 240px avatar (was 84px for 120px)
+    left: "calc(50% + 80px)", // Adjusted for larger avatar (was 38px for 120px)
+    width: "18px", // Slightly larger
+    height: "18px", // Slightly larger
     backgroundColor: "#00ff88",
     borderRadius: "50%",
-    border: "2px solid #0f0f0f",
+    border: "3px solid #0f0f0f",
     animation: "pulse 2s ease-in-out infinite",
   },
   photoError: {
@@ -573,21 +498,21 @@ const styles = {
   },
   uploadHint: {
     color: "#444444",
-    fontSize: "10px",
-    marginTop: "-4px",
+    fontSize: "11px",
+    marginTop: "-2px",
     letterSpacing: "0.3px",
   },
   sidebarName: {
     color: "#ffffff",
-    fontSize: "18px",
+    fontSize: "20px", // Slightly increased
     fontWeight: "700",
-    marginTop: "4px",
+    marginTop: "8px",
   },
   roleBadge: {
     backgroundColor: "rgba(0,255,136,0.1)",
     border: "1px solid rgba(0,255,136,0.25)",
     color: "#00ff88",
-    fontSize: "11px",
+    fontSize: "12px",
     fontWeight: "700",
     letterSpacing: "1.5px",
     padding: "4px 14px",
@@ -595,7 +520,7 @@ const styles = {
   },
   sidebarEmail: {
     color: "#555555",
-    fontSize: "12px",
+    fontSize: "13px",
   },
   sidebarNav: {
     display: "flex",
@@ -653,7 +578,7 @@ const styles = {
     backgroundColor: "#222222",
   },
 
-  // CONTENT
+  // CONTENT - Removed statsBar styles
   content: {
     flex: 1,
     padding: "32px",
@@ -661,48 +586,6 @@ const styles = {
     flexDirection: "column",
     gap: "24px",
     overflowY: "auto",
-  },
-  statsBar: {
-    display: "grid",
-    gridTemplateColumns: "repeat(4, 1fr)",
-    gap: "16px",
-  },
-  statCard: {
-    backgroundColor: "#1a1a1a",
-    border: "1px solid #222222",
-    borderRadius: "14px",
-    padding: "20px",
-    display: "flex",
-    alignItems: "center",
-    gap: "16px",
-    cursor: "default",
-    boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
-  },
-  statIconCircle: {
-    width: "44px",
-    height: "44px",
-    borderRadius: "12px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  statIcon: {
-    fontSize: "20px",
-  },
-  statInfo: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "2px",
-  },
-  statValue: {
-    fontSize: "15px",
-    fontWeight: "700",
-  },
-  statLabel: {
-    color: "#555555",
-    fontSize: "11px",
-    textTransform: "uppercase",
-    letterSpacing: "0.5px",
   },
   mainCard: {
     flex: 1,
@@ -840,54 +723,6 @@ const styles = {
     borderRadius: "10px",
     fontSize: "14px",
     cursor: "pointer",
-  },
-  emptyState: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "60px 20px",
-    gap: "16px",
-    textAlign: "center",
-  },
-  emptyIcon: {
-    fontSize: "56px",
-    marginBottom: "8px",
-  },
-  emptyTitle: {
-    color: "#ffffff",
-    fontSize: "18px",
-    fontWeight: "600",
-  },
-  emptyText: {
-    color: "#555555",
-    fontSize: "14px",
-    maxWidth: "400px",
-    lineHeight: "1.7",
-  },
-  phaseBadge: {
-    backgroundColor: "rgba(107,203,255,0.1)",
-    border: "1px solid rgba(107,203,255,0.2)",
-    color: "#6bcbff",
-    fontSize: "11px",
-    fontWeight: "700",
-    padding: "4px 12px",
-    borderRadius: "20px",
-    letterSpacing: "1px",
-  },
-  phaseInfo: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "10px",
-    marginTop: "8px",
-  },
-  phaseItem: {
-    backgroundColor: "#222222",
-    border: "1px solid #2a2a2a",
-    color: "#888888",
-    padding: "10px 20px",
-    borderRadius: "8px",
-    fontSize: "13px",
   },
 };
 
