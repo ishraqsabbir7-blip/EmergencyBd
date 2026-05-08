@@ -224,7 +224,7 @@ const PaymentModal = ({ fund, token, onClose, onSuccess }) => {
                 value={amount}
                 onChange={e => {
                   setAmount(e.target.value);
-                  setError(""); // clear error when user types
+                  setError("");
                 }}
                 style={{ ...inputStyle, paddingLeft: 32, fontSize: 18, fontWeight: 700 }}
                 onFocus={e => e.target.style.borderColor = "#00ff88"}
@@ -232,7 +232,6 @@ const PaymentModal = ({ fund, token, onClose, onSuccess }) => {
               />
             </div>
 
-            {/* Quick amount buttons — only show amounts ≤ remaining */}
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
               {[100, 250, 500, 1000, 2000, 5000].filter(a => a <= remaining).map(a => (
                 <button key={a} onClick={() => { setAmount(a.toString()); setError(""); }}
@@ -246,7 +245,6 @@ const PaymentModal = ({ fund, token, onClose, onSuccess }) => {
                   {"৳" + a.toLocaleString()}
                 </button>
               ))}
-              {/* Max button */}
               {remaining > 0 && (
                 <button onClick={() => { setAmount(String(remaining)); setError(""); }}
                   style={{
@@ -273,7 +271,6 @@ const PaymentModal = ({ fund, token, onClose, onSuccess }) => {
               </button>
               <button
                 onClick={() => {
-                  // Fix 3: validate and show error instead of silently capping
                   if (!amount || Number(amount) < 1) {
                     setError("Please enter a valid donation amount.");
                     return;
@@ -358,7 +355,8 @@ const PaymentModal = ({ fund, token, onClose, onSuccess }) => {
 };
 
 // ── Detail Panel ───────────────────────────────────────────────────────────────
-const DetailPanel = ({ fund, onClose, onDonate, isOwn, onDelete, setLightboxUrl }) => {
+// Fix 2: Accept fundBlocked prop
+const DetailPanel = ({ fund, onClose, onDonate, isOwn, onDelete, setLightboxUrl, fundBlocked }) => {
   const done = (fund.amountRaised || 0) >= fund.goalAmount;
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 900, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "flex-end" }}
@@ -438,12 +436,21 @@ const DetailPanel = ({ fund, onClose, onDonate, isOwn, onDelete, setLightboxUrl 
 
           <div style={{ color: "#333", fontSize: 11, marginBottom: 18 }}>{"Posted " + timeAgo(fund.createdAt)}</div>
 
+          {/* Fix 2: Donate Now button — blocked vs normal */}
           {!isOwn && !done && (
-            <button onClick={onDonate}
-              style={{ width: "100%", padding: "13px", background: "linear-gradient(135deg,#00ff88,#00cc6a)", border: "none", borderRadius: 12, color: "#0a0a0a", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", marginBottom: 10, boxShadow: "0 6px 20px rgba(0,255,136,0.25)" }}>
-              {"💚 Donate Now"}
-            </button>
+            fundBlocked ? (
+              <div style={{ padding: "12px 14px", background: "rgba(255,107,107,0.08)", border: "1px solid rgba(255,107,107,0.2)", borderRadius: 12, marginBottom: 10 }}>
+                <p style={{ color: "#ff6b6b", fontSize: 13, fontWeight: 700, margin: "0 0 4px" }}>{"🚫 Donation Blocked"}</p>
+                <p style={{ color: "#888", fontSize: 12, margin: 0 }}>{"Your fund features are blocked. Contact admin@emergencybd.com"}</p>
+              </div>
+            ) : (
+              <button onClick={onDonate}
+                style={{ width: "100%", padding: "13px", background: "linear-gradient(135deg,#00ff88,#00cc6a)", border: "none", borderRadius: 12, color: "#0a0a0a", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", marginBottom: 10, boxShadow: "0 6px 20px rgba(0,255,136,0.25)" }}>
+                {"💚 Donate Now"}
+              </button>
+            )
           )}
+
           {done && (
             <div style={{ padding: "13px", background: "rgba(0,255,136,0.06)", border: "1px solid rgba(0,255,136,0.2)", borderRadius: 12, color: "#00ff88", textAlign: "center", fontWeight: 600, fontSize: 14, marginBottom: 10 }}>
               {"🎉 Campaign Goal Reached!"}
@@ -592,7 +599,7 @@ const SubmitForm = ({ token, onClose, onSubmitted }) => {
               onBlur={e => e.target.style.borderColor = "#2a2a2a"} />
           </div>
 
-          {/* Goal Amount — taka symbol vertically centred (Bug 4 fix) */}
+          {/* Goal Amount */}
           <div>
             <label style={{ color: "#666", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6 }}>
               {"Goal Amount (৳ Taka) "}<span style={{ color: "#ff4444" }}>{"*"}</span>
@@ -608,7 +615,7 @@ const SubmitForm = ({ token, onClose, onSubmitted }) => {
             <p style={{ color: "#333", fontSize: 11, marginTop: 4 }}>{"Maximum: ৳1,00,00,000 (1 Crore Taka)"}</p>
           </div>
 
-          {/* Contact Number — flag + code + label (Bug 4 fix) */}
+          {/* Contact Number */}
           <div>
             <label style={{ color: "#666", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6 }}>
               {"Contact Number "}<span style={{ color: "#ff4444" }}>{"*"}</span>
@@ -674,7 +681,7 @@ const SubmitForm = ({ token, onClose, onSubmitted }) => {
             )}
           </div>
 
-          {/* Documents — Mandatory (Bug 4 fix) */}
+          {/* Documents */}
           <div>
             <label style={{ color: "#666", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6 }}>
               {"📄 Verification Document "}
@@ -772,12 +779,19 @@ const MyRequestDetail = ({ fund, onClose }) => {
           {fund.documents?.length > 0 && (
             <div>
               <p style={{ color: "#444", fontSize: 10, fontWeight: 700, letterSpacing: 0.8, marginBottom: 8 }}>{"YOUR DOCUMENTS"}</p>
-              {fund.documents.map((doc, i) => (
-                <a key={i} href={doc} target="_blank" rel="noreferrer"
-                  style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", background: "#1a1a1a", border: "1px solid #222", borderRadius: 8, color: "#6bcbff", fontSize: 13, textDecoration: "none", marginBottom: 6 }}>
-                  {"📄 Document " + (i + 1)}
-                </a>
-              ))}
+              {fund.documents.map((doc, i) => {
+                const dlUrl = doc.includes("/raw/upload/")
+                  ? doc.replace("/raw/upload/", "/raw/upload/fl_attachment/")
+                  : doc.includes("/upload/") && !doc.includes("/image/upload/")
+                    ? doc.replace("/upload/", "/upload/fl_attachment/")
+                    : doc;
+                return (
+                  <a key={i} href={dlUrl} target="_blank" rel="noreferrer"
+                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", background: "#1a1a1a", border: "1px solid #222", borderRadius: 8, color: "#6bcbff", fontSize: 13, textDecoration: "none", marginBottom: 6 }}>
+                    {"📄 Document " + (i + 1) + " — click to download"}
+                  </a>
+                );
+              })}
             </div>
           )}
 
@@ -862,6 +876,24 @@ const MassFunding = () => {
   const [myDonations, setMyDonations]     = useState([]);
   const [donationsLoading, setDonationsLoading] = useState(false);
 
+  // Fix 2: Block check state
+  const [fundBlocked, setFundBlocked]   = useState(false);
+  const [blockChecking, setBlockChecking] = useState(true);
+
+  // Fix 2: Fetch block status on mount
+  useEffect(() => {
+    const checkBlock = async () => {
+      try {
+        const res = await axios.get(`${API.replace("/api", "")}/api/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setFundBlocked(res.data.fundFeaturesBlocked || false);
+      } catch (err) { console.error(err); }
+      setBlockChecking(false);
+    };
+    checkBlock();
+  }, [token]);
+
   const fetchFunds = async () => {
     try {
       const [approvedRes, mineRes] = await Promise.all([
@@ -876,7 +908,6 @@ const MassFunding = () => {
 
   useEffect(() => { fetchFunds(); }, [token]);
 
-  // Bug 1 fix: single direct API call
   const loadDonationHistory = async () => {
     setDonationsLoading(true);
     try {
@@ -970,19 +1001,47 @@ const MassFunding = () => {
               ))}
             </div>
           </div>
-          <div style={{ marginTop: 18 }}>
-            <button onClick={() => setShowSubmit(true)}
-              style={{ padding: "9px 20px", background: "linear-gradient(135deg,#00ff88,#00cc6a)", border: "none", borderRadius: 10, color: "#0a0a0a", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
-              {"+ Request Mass Funding"}
+
+          {/* Fix 2: Request button — disabled and blocked banner when fundBlocked */}
+          <div style={{ marginTop: 18, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <button
+              onClick={() => { if (!fundBlocked) setShowSubmit(true); }}
+              disabled={fundBlocked || blockChecking}
+              style={{
+                padding: "9px 20px",
+                background: fundBlocked
+                  ? "rgba(255,107,107,0.12)"
+                  : "linear-gradient(135deg,#00ff88,#00cc6a)",
+                border: fundBlocked ? "1px solid rgba(255,107,107,0.3)" : "none",
+                borderRadius: 10,
+                color: fundBlocked ? "#ff6b6b" : "#0a0a0a",
+                fontSize: 13, fontWeight: 700,
+                cursor: fundBlocked ? "not-allowed" : "pointer",
+                fontFamily: "inherit",
+                opacity: blockChecking ? 0.5 : 1,
+              }}>
+              {fundBlocked ? "🚫 Fund Features Blocked" : "+ Request Mass Funding"}
             </button>
-            <span style={{ color: "#333", fontSize: 12, marginLeft: 12 }}>{"Needs admin approval before going public"}</span>
+            {fundBlocked ? (
+              <div style={{ background: "rgba(255,107,107,0.07)", border: "1px solid rgba(255,107,107,0.2)", borderRadius: 10, padding: "10px 16px", maxWidth: 480 }}>
+                <p style={{ color: "#ff6b6b", fontSize: 13, fontWeight: 700, margin: "0 0 4px" }}>{"🚫 Your fund features have been blocked"}</p>
+                <p style={{ color: "#888", fontSize: 12, margin: 0, lineHeight: 1.5 }}>
+                  {"You cannot submit fund or mass fund requests. Contact admin to resolve: "}
+                  <span style={{ color: "#00ff88" }}>{"admin@emergencybd.com"}</span>
+                  {" · "}
+                  <span style={{ color: "#00ff88" }}>{"+8801700000000"}</span>
+                </p>
+              </div>
+            ) : (
+              <span style={{ color: "#333", fontSize: 12 }}>{"Needs admin approval before going public"}</span>
+            )}
           </div>
         </div>
       </div>
 
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "22px 48px" }}>
 
-        {/* Tabs: Browse, My Requests, Donation History */}
+        {/* Tabs */}
         <div style={{ display: "flex", gap: 4, marginBottom: 24, borderBottom: "1px solid #1e1e1e" }}>
           {[
             ["browse",  "🌍 Browse Campaigns"],
@@ -1185,6 +1244,7 @@ const MassFunding = () => {
         )}
       </div>
 
+      {/* Fix 2: Pass fundBlocked into DetailPanel */}
       {selectedFund && (
         <DetailPanel
           fund={selectedFund}
@@ -1193,6 +1253,7 @@ const MassFunding = () => {
           onDelete={handleDelete}
           isOwn={selectedFund.userId?._id === user?._id || selectedFund.userId === user?._id}
           setLightboxUrl={setLightboxUrl}
+          fundBlocked={fundBlocked}
         />
       )}
 

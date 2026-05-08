@@ -248,11 +248,27 @@ export const updateMassFundStatus = async (req, res) => {
 
 export const deleteMassFund = async (req, res) => {
   try {
-    const fund = await MassFundRequest.findById(req.params.id);
+    const fund = await MassFundRequest.findById(req.params.id)
+      .populate("userId", "name");
     if (!fund) return res.status(404).json({ message: "Not found" });
-    const isOwner = fund.userId.toString() === req.user.id;
+
+    const isOwner = fund.userId._id.toString() === req.user.id;
     const isAdmin = req.user.role === "admin";
     if (!isOwner && !isAdmin) return res.status(403).json({ message: "Not authorized" });
+
+    // Bug 3: notify the user if admin is deleting their request
+    if (isAdmin && !isOwner) {
+      await Notification.create(
+        notif(
+          fund.userId._id,
+          "🗑️ Mass Fund Request Removed",
+          `Your mass fund request "${fund.title}" has been removed by the admin. If you believe this is a mistake, please contact the admin at admin@emergencybd.com.`,
+          "fund_update",
+          "high"
+        )
+      );
+    }
+
     await MassFundRequest.findByIdAndDelete(req.params.id);
     res.status(200).json({ message: "Mass fund request deleted" });
   } catch (error) {
