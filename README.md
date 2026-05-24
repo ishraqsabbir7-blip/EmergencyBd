@@ -33,4 +33,4 @@ within a single platform with admin oversight and live analytics.
 
 ## 👥 Team
 
-Built as a semester project for CSE470 — Software Engineering at BRAC University.
+Built as a semester project  
